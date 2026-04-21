@@ -1,0 +1,907 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BAND-MAID LIVE — Okyuji Archive</title>
+  <link rel="icon" href="favicon.png">
+  <style>
+    /* ── RESET & ROOT ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #0a0a0a;
+      --bg2:     #141414;
+      --bg3:     #1c1c1c;
+      --bg4:     #252525;
+      --border:  #2a2a2a;
+      --border2: #3a3a3a;
+      --text:    #f0f0f0;
+      --text2:   #999;
+      --text3:   #555;
+      --accent:  #c8a96e;
+      --accent-dim: #8a7548;
+      --hl:      rgba(200, 169, 110, 0.18);
+      --radius:  8px;
+      --font:    'Segoe UI', system-ui, sans-serif;
+    }
+
+    html { background: var(--bg); }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: #e6c68a; }
+
+    /* ── LAYOUT ────────────────────────────────────────────────────── */
+    .app {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "header header"
+        "shows  detail";
+      height: 100vh;
+    }
+
+    header.top {
+      grid-area: header;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header.top h1 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    header.top h1 .sub {
+      color: var(--text2);
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      margin-left: 8px;
+    }
+
+    #search {
+      flex: 1;
+      padding: 8px 12px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      max-width: 500px;
+    }
+    #search:focus {
+      outline: none;
+      border-color: var(--accent-dim);
+      background: var(--bg4);
+    }
+
+    .btn {
+      padding: 7px 14px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .btn:hover { background: var(--bg4); border-color: var(--border2); }
+    .btn.accent { border-color: var(--accent-dim); color: var(--accent); }
+    .btn.accent:hover { background: var(--hl); }
+
+    .status {
+      color: var(--text2);
+      font-size: 12px;
+      min-width: 120px;
+      text-align: right;
+    }
+
+    /* ── SHOWS PANEL ───────────────────────────────────────────────── */
+    .shows {
+      grid-area: shows;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .show {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .show:hover { background: var(--bg3); }
+    .show.selected { background: var(--hl); border-left: 3px solid var(--accent); padding-left: 13px; }
+    .show-title { font-size: 13px; line-height: 1.4; margin-bottom: 4px; }
+    .show-meta {
+      font-size: 11px;
+      color: var(--text2);
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      letter-spacing: 0.03em;
+    }
+    .show-meta .parts { color: var(--accent-dim); }
+    .show-meta .venue { }
+    .show-meta .date { color: var(--text3); }
+    .show-aliases {
+      font-size: 10px;
+      color: var(--accent-dim);
+      margin-top: 3px;
+      font-style: italic;
+    }
+
+    .show.song-hit { border-left: 3px solid var(--accent); padding-left: 13px; }
+    .show mark {
+      background: var(--hl);
+      color: var(--accent);
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+
+    .shows-empty {
+      padding: 40px 16px;
+      text-align: center;
+      color: var(--text2);
+      font-size: 12px;
+    }
+
+    /* ── DETAIL PANEL ──────────────────────────────────────────────── */
+    .detail {
+      grid-area: detail;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .detail-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text2);
+      font-size: 13px;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .detail-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .detail-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+    .detail-header .meta {
+      display: flex;
+      gap: 16px;
+      color: var(--text2);
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+    .detail-header .meta span { display: flex; align-items: center; gap: 5px; }
+    .detail-header .meta .label {
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 10px;
+    }
+    .detail-header .aliases {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--accent-dim);
+      font-style: italic;
+    }
+
+    .video-wrap {
+      padding: 16px 24px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+    }
+    .video-frame {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+    }
+    .video-frame iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+    .video-fallback {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text2);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+    }
+    .video-fallback img {
+      max-width: 200px;
+      border-radius: 4px;
+      opacity: 0.8;
+    }
+
+    .video-controls {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .video-controls .label {
+      font-size: 11px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .parts-tabs {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .part-tab {
+      padding: 5px 11px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text2);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .part-tab:hover { color: var(--text); border-color: var(--border2); }
+    .part-tab.active {
+      background: var(--hl);
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
+    .open-prime {
+      margin-left: auto;
+      font-size: 12px;
+    }
+
+    .setlist {
+      padding: 16px 24px 40px;
+    }
+    .setlist-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+    .setlist-head .title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text3);
+    }
+    .setlist-head .duration {
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    .setlist-items {
+      list-style: none;
+    }
+    .setlist-items li {
+      padding: 8px 12px;
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .setlist-items li:hover { background: var(--bg2); }
+    .setlist-items li.non-interactive { cursor: default; }
+    .setlist-items li.non-interactive:hover { background: transparent; }
+    .setlist-items li.song-hit {
+      background: var(--hl);
+      border-left: 3px solid var(--accent);
+      padding-left: 9px;
+    }
+    .setlist-items .time {
+      color: var(--accent);
+      font-family: 'Consolas', 'Menlo', monospace;
+      font-size: 12px;
+      flex-shrink: 0;
+      min-width: 48px;
+    }
+    .setlist-items .song { color: var(--text); font-size: 13px; }
+    .setlist-items .part-badge {
+      margin-left: auto;
+      font-size: 10px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .setlist-items mark {
+      background: transparent;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .no-setlist {
+      padding: 20px 12px;
+      color: var(--text3);
+      font-size: 12px;
+      font-style: italic;
+      text-align: center;
+    }
+
+    /* ── SCROLLBAR ─────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border2); }
+
+    /* ── RESPONSIVE ────────────────────────────────────────────────── */
+    @media (max-width: 800px) {
+      body { overflow: auto; height: auto; }
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "header"
+          "shows"
+          "detail";
+        height: auto;
+      }
+      .shows { max-height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <h1>BAND-MAID LIVE <span class="sub">Okyuji Archive</span></h1>
+      <input id="search" type="text" placeholder="Search shows, songs, venues, aliases (e.g., &quot;zepp tokyo&quot;, &quot;domination&quot;)…" autocomplete="off" spellcheck="false">
+      <button class="btn accent" id="refresh-btn" title="Refetch data from source">⟲ Refresh</button>
+      <span class="status" id="status">Loading…</span>
+    </header>
+
+    <nav class="shows" id="shows-panel">
+      <div class="shows-empty">Loading shows…</div>
+    </nav>
+
+    <main class="detail" id="detail-panel">
+      <div class="detail-empty">Select a show on the left to view its setlist.</div>
+    </main>
+  </div>
+
+  <script>
+  // ─── CONFIGURATION ───────────────────────────────────────────────
+  const SRC_PRIME    = 'https://drivetimebm.github.io/BAND-MAID_gpt/prime/prime.json';
+  const SRC_SETLISTS = 'https://drivetimebm.github.io/BAND-MAID_prime/data/setlists.json';
+  const SRC_ALIASES  = './aliases.json';
+
+  const CACHE_KEY  = 'bmlive_cache_v1';
+  const CACHE_TTL  = 24 * 60 * 60 * 1000; // 24 hours
+
+  // ─── DATA LOADING ────────────────────────────────────────────────
+  const $status = document.getElementById('status');
+  const setStatus = (msg) => { $status.textContent = msg; };
+
+  async function fetchJson(url) {
+    const res = await fetch(url, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+    return res.json();
+  }
+
+  async function loadAllData(forceFresh = false) {
+    // Try cache first unless refresh was clicked
+    if (!forceFresh) {
+      try {
+        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (cached && Date.now() - cached.t < CACHE_TTL) {
+          setStatus(`Loaded from cache (${ageLabel(cached.t)})`);
+          return cached.data;
+        }
+      } catch {}
+    }
+
+    setStatus('Fetching…');
+    const [prime, setlists, aliases] = await Promise.all([
+      fetchJson(SRC_PRIME),
+      fetchJson(SRC_SETLISTS),
+      fetchJson(SRC_ALIASES).catch(() => []), // aliases optional
+    ]);
+    const data = { prime, setlists, aliases };
+
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), data }));
+    } catch (e) {
+      console.warn('Cache write failed:', e);
+    }
+    setStatus('Fresh data loaded');
+    return data;
+  }
+
+  function ageLabel(ts) {
+    const mins = Math.round((Date.now() - ts) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.round(hrs / 24)}d ago`;
+  }
+
+  // ─── DATA TRANSFORMATION ─────────────────────────────────────────
+  function extractVideoId(url) {
+    const m = url && url.match(/movies\/(\d+)/);
+    return m ? m[1] : null;
+  }
+
+  // Strips "part N" (and variants) from the end of a title.
+  // Also strips parenthesized dates and extra whitespace.
+  function deriveShowKey(title) {
+    if (!title) return '';
+    let t = title;
+    // Remove parenthesized dates/info: (Sept 9, 2022), (Feb. 22, 2024), etc.
+    t = t.replace(/\([^)]*\)/g, '');
+    // Remove "part N" / "pt N" / "Part N" at end (various separators)
+    t = t.replace(/\s*[-–—:]?\s*(part|pt\.?)\s*\d+\s*$/i, '');
+    // Collapse whitespace
+    t = t.replace(/\s+/g, ' ').trim();
+    return t;
+  }
+
+  // Extracts a part number from the title, falling back to 1 if none found.
+  function extractPartNumber(title) {
+    if (!title) return 1;
+    const m = title.match(/\b(?:part|pt\.?)\s*(\d+)\b/i);
+    return m ? parseInt(m[1], 10) : 1;
+  }
+
+  // Parses "Sept 9, 2022", "Feb. 22, 2024", "2017", etc. from a title.
+  // Returns ISO date if possible, else null. Prefers setlist JSON data where available.
+  function deriveDate(title) {
+    if (!title) return null;
+    // Parenthesized date first
+    const paren = title.match(/\(([^)]+)\)/);
+    const candidate = paren ? paren[1] : title;
+    const months = {
+      jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7,
+      sep:8, sept:8, oct:9, nov:10, dec:11
+    };
+    // Month Day, Year
+    let m = candidate.match(/([A-Za-z]{3,4})\.?\s+(\d{1,2}),?\s+(\d{4})/);
+    if (m) {
+      const mo = months[m[1].toLowerCase()];
+      if (mo !== undefined) {
+        const d = new Date(Date.UTC(+m[3], mo, +m[2]));
+        return d.toISOString().slice(0, 10);
+      }
+    }
+    // Just a year
+    m = candidate.match(/\b(19|20)\d{2}\b/);
+    if (m) return m[0];
+    return null;
+  }
+
+  // Groups OKYUJI videos from prime.json into shows.
+  // Each show = { key, title, displayTitle, parts: [{ videoId, partNum, title, setlist, venue, date, image }], venue, date, aliases }
+  function buildShows(prime, setlists, aliases) {
+    const okyuji = prime.filter(e => e.Category === 'OKYUJI' && e.URL);
+    // Group by derived key
+    const groups = new Map();
+    for (const entry of okyuji) {
+      const videoId = extractVideoId(entry.URL);
+      if (!videoId) continue;
+      const key = deriveShowKey(entry.Title);
+      if (!groups.has(key)) groups.set(key, []);
+      const sl = setlists[videoId] || null;
+      groups.get(key).push({
+        videoId,
+        primeTitle: entry.Title,
+        partNum: extractPartNumber(entry.Title),
+        image: entry.Image || '',
+        url: entry.URL,
+        setlistData: sl,
+        // Pull venue/date from setlist (high quality) or derive from title
+        venue: sl && sl.venue ? sl.venue : '',
+        date: sl && sl.date ? sl.date : deriveDate(entry.Title),
+      });
+    }
+
+    // Alias lookup: case-insensitive substring on showKey
+    const aliasIndex = (aliases || []).map(a => ({
+      key: (a.showKey || '').toLowerCase(),
+      aliases: a.aliases || [],
+    }));
+    const findAliases = (showKey) => {
+      const k = showKey.toLowerCase();
+      for (const a of aliasIndex) {
+        if (!a.key) continue;
+        if (k.includes(a.key) || a.key.includes(k)) return a.aliases;
+      }
+      return [];
+    };
+
+    const shows = [];
+    for (const [key, parts] of groups.entries()) {
+      parts.sort((a, b) => a.partNum - b.partNum);
+      // Show-level metadata: prefer first part's setlist venue/date, else anything
+      const venue = parts.find(p => p.venue)?.venue || '';
+      const date  = parts.find(p => p.date)?.date || '';
+      shows.push({
+        key,
+        title: key,
+        displayTitle: key,
+        venue,
+        date,
+        parts,
+        aliases: findAliases(key),
+      });
+    }
+
+    // Sort shows by title (alphabetical puts related ones together; dates vary in precision)
+    shows.sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }));
+    return shows;
+  }
+
+  function formatDate(d) {
+    if (!d) return '';
+    if (/^\d{4}$/.test(d)) return d;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      const dt = new Date(d);
+      return dt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    return d;
+  }
+
+  function timeToSeconds(s) {
+    if (!s) return 0;
+    const parts = s.split(':').map(Number);
+    if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+    if (parts.length === 2) return parts[0]*60 + parts[1];
+    return parts[0] || 0;
+  }
+
+  // ─── SEARCH ───────────────────────────────────────────────────────
+  // Returns { matches: boolean, reason: 'title'|'alias'|'venue'|null, songHits: Set<videoId_time> }
+  function searchShow(show, query) {
+    if (!query) return { matches: true, reason: null, songHits: new Set() };
+    const q = query.toLowerCase();
+    const songHits = new Set();
+
+    // Find matching songs by videoId+time key
+    for (const part of show.parts) {
+      if (!part.setlistData || !part.setlistData.setlist) continue;
+      for (const song of part.setlistData.setlist) {
+        if ((song.song || '').toLowerCase().includes(q)) {
+          songHits.add(`${part.videoId}|${song.time || ''}`);
+        }
+      }
+    }
+
+    // Metadata matches
+    const titleMatch = show.title.toLowerCase().includes(q);
+    const venueMatch = (show.venue || '').toLowerCase().includes(q);
+    const aliasMatch = (show.aliases || []).some(a => a.toLowerCase().includes(q));
+    const dateMatch  = (show.date || '').toLowerCase().includes(q);
+
+    const matches = titleMatch || venueMatch || aliasMatch || dateMatch || songHits.size > 0;
+    let reason = null;
+    if (aliasMatch) reason = 'alias';
+    else if (titleMatch) reason = 'title';
+    else if (venueMatch) reason = 'venue';
+    else if (songHits.size > 0) reason = 'song';
+    else if (dateMatch) reason = 'date';
+
+    return { matches, reason, songHits };
+  }
+
+  function highlight(text, query) {
+    if (!query) return escapeHtml(text);
+    const esc = escapeHtml(text);
+    const qEsc = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return esc.replace(new RegExp(`(${qEsc})`, 'gi'), '<mark>$1</mark>');
+  }
+  function escapeHtml(s) {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ─── RENDERING ───────────────────────────────────────────────────
+  const state = {
+    shows: [],
+    query: '',
+    selectedKey: null,
+    selectedPartIdx: 0,
+  };
+
+  const $showsPanel  = document.getElementById('shows-panel');
+  const $detailPanel = document.getElementById('detail-panel');
+  const $search      = document.getElementById('search');
+
+  function renderShowsList() {
+    const q = state.query;
+    const results = state.shows
+      .map(show => ({ show, ...searchShow(show, q) }))
+      .filter(r => r.matches);
+
+    if (!results.length) {
+      $showsPanel.innerHTML = `<div class="shows-empty">No shows match "${escapeHtml(q)}".</div>`;
+      return;
+    }
+
+    const html = results.map(({ show, reason, songHits }) => {
+      const selected = show.key === state.selectedKey ? ' selected' : '';
+      const songHit  = reason === 'song' ? ' song-hit' : '';
+      const partsCount = show.parts.length > 1 ? `<span class="parts">${show.parts.length} parts</span>` : '';
+      const venue = show.venue ? `<span class="venue">${escapeHtml(show.venue)}</span>` : '';
+      const date  = show.date  ? `<span class="date">${escapeHtml(formatDate(show.date))}</span>` : '';
+      const aliases = (reason === 'alias' && show.aliases.length)
+        ? `<div class="show-aliases">${show.aliases.map(a => highlight(a, q)).join(', ')}</div>`
+        : '';
+      const songNote = reason === 'song'
+        ? `<div class="show-aliases">${songHits.size} song match${songHits.size > 1 ? 'es' : ''}</div>`
+        : '';
+      return `
+        <div class="show${selected}${songHit}" data-key="${escapeHtml(show.key)}">
+          <div class="show-title">${highlight(show.title, q)}</div>
+          <div class="show-meta">${partsCount}${venue}${date}</div>
+          ${aliases}${songNote}
+        </div>
+      `;
+    }).join('');
+
+    $showsPanel.innerHTML = html;
+
+    $showsPanel.querySelectorAll('.show').forEach(el => {
+      el.addEventListener('click', () => {
+        const key = el.dataset.key;
+        selectShow(key);
+      });
+    });
+  }
+
+  function selectShow(key, jumpToSong = null) {
+    state.selectedKey = key;
+    state.selectedPartIdx = 0;
+
+    // If we're coming from a song search hit, pick the part + time
+    if (jumpToSong) {
+      const show = state.shows.find(s => s.key === key);
+      if (show) {
+        const [vid, time] = jumpToSong.split('|');
+        const idx = show.parts.findIndex(p => p.videoId === vid);
+        if (idx >= 0) {
+          state.selectedPartIdx = idx;
+          state.jumpTime = timeToSeconds(time);
+        }
+      }
+    } else {
+      state.jumpTime = null;
+    }
+
+    updateUrl();
+    renderShowsList();
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const show = state.shows.find(s => s.key === state.selectedKey);
+    if (!show) {
+      $detailPanel.innerHTML = `<div class="detail-empty">Select a show on the left to view its setlist.</div>`;
+      return;
+    }
+
+    const q = state.query;
+    const partIdx = Math.min(state.selectedPartIdx, show.parts.length - 1);
+    const part = show.parts[partIdx];
+
+    const partsTabs = show.parts.length > 1
+      ? `<div class="video-controls">
+           <span class="label">Parts:</span>
+           <div class="parts-tabs">
+             ${show.parts.map((p, i) => `
+               <div class="part-tab${i === partIdx ? ' active' : ''}" data-pi="${i}">
+                 Part ${p.partNum}
+               </div>`).join('')}
+           </div>
+           <a class="btn accent open-prime" href="${escapeHtml(part.url)}" target="_blank" rel="noopener">Open on Prime ↗</a>
+         </div>`
+      : `<div class="video-controls">
+           <a class="btn accent open-prime" href="${escapeHtml(part.url)}" target="_blank" rel="noopener">Open on Prime ↗</a>
+         </div>`;
+
+    // Try to embed with iframe; provide fallback with thumbnail + link if embedding is blocked
+    const seekHash = state.jumpTime ? `#t=${state.jumpTime}` : '';
+    const embedUrl = `${part.url}${seekHash}`;
+    const videoHtml = `
+      <div class="video-frame">
+        <iframe src="${escapeHtml(embedUrl)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+      </div>
+    `;
+
+    // Setlist rendering
+    const sl = part.setlistData;
+    let setlistHtml;
+    if (sl && sl.setlist && sl.setlist.length) {
+      const durationLabel = sl.notes ? `<span class="duration">${escapeHtml(sl.notes)}</span>` : '';
+      const items = sl.setlist.map(song => {
+        const hitKey = `${part.videoId}|${song.time || ''}`;
+        const songMatches = q && (song.song || '').toLowerCase().includes(q.toLowerCase());
+        const hitCls = songMatches ? ' song-hit' : '';
+        const timeStr = song.time || '';
+        const seconds = timeToSeconds(timeStr);
+        const interactive = timeStr ? '' : ' non-interactive';
+        return `
+          <li class="${hitCls}${interactive}" data-t="${seconds}">
+            <span class="time">${escapeHtml(timeStr || '—')}</span>
+            <span class="song">${highlight(song.song || '', q)}</span>
+          </li>
+        `;
+      }).join('');
+      setlistHtml = `
+        <div class="setlist">
+          <div class="setlist-head">
+            <span class="title">Setlist${show.parts.length > 1 ? ` — Part ${part.partNum}` : ''}</span>
+            ${durationLabel}
+          </div>
+          <ol class="setlist-items">${items}</ol>
+        </div>
+      `;
+    } else {
+      setlistHtml = `
+        <div class="setlist">
+          <div class="setlist-head"><span class="title">Setlist${show.parts.length > 1 ? ` — Part ${part.partNum}` : ''}</span></div>
+          <div class="no-setlist">No setlist data available for this video.</div>
+        </div>
+      `;
+    }
+
+    const aliasLine = show.aliases.length
+      ? `<div class="aliases">Also known as: ${show.aliases.map(a => escapeHtml(a)).join(', ')}</div>`
+      : '';
+
+    $detailPanel.innerHTML = `
+      <div class="detail-header">
+        <h2>${escapeHtml(show.displayTitle)}</h2>
+        <div class="meta">
+          ${show.venue ? `<span><span class="label">Venue</span>${escapeHtml(show.venue)}</span>` : ''}
+          ${show.date  ? `<span><span class="label">Date</span>${escapeHtml(formatDate(show.date))}</span>` : ''}
+          ${show.parts.length > 1 ? `<span><span class="label">Parts</span>${show.parts.length}</span>` : ''}
+        </div>
+        ${aliasLine}
+      </div>
+      <div class="video-wrap">
+        ${videoHtml}
+        ${partsTabs}
+      </div>
+      ${setlistHtml}
+    `;
+
+    // Part tab clicks
+    $detailPanel.querySelectorAll('.part-tab').forEach(el => {
+      el.addEventListener('click', () => {
+        state.selectedPartIdx = parseInt(el.dataset.pi, 10);
+        state.jumpTime = null;
+        updateUrl();
+        renderDetail();
+      });
+    });
+
+    // Setlist song clicks → seek the iframe
+    $detailPanel.querySelectorAll('.setlist-items li').forEach(el => {
+      if (el.classList.contains('non-interactive')) return;
+      el.addEventListener('click', () => {
+        const seconds = parseInt(el.dataset.t, 10);
+        if (isNaN(seconds)) return;
+        state.jumpTime = seconds;
+        // Reload iframe with new hash
+        const iframe = $detailPanel.querySelector('.video-frame iframe');
+        if (iframe) {
+          iframe.src = `${part.url}#t=${seconds}`;
+        }
+        updateUrl();
+      });
+    });
+
+    // Clear one-shot jumpTime after using it
+    // (keep in URL so refresh lands in same spot, but next part switch resets it)
+  }
+
+  // ─── URL STATE ────────────────────────────────────────────────────
+  function updateUrl() {
+    const params = new URLSearchParams();
+    if (state.selectedKey) params.set('show', state.selectedKey);
+    if (state.selectedPartIdx) params.set('part', state.selectedPartIdx);
+    if (state.jumpTime) params.set('t', state.jumpTime);
+    if (state.query) params.set('q', state.query);
+    const url = `${location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+    history.replaceState(null, '', url);
+  }
+
+  function loadFromUrl() {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q');
+    if (q) { state.query = q; $search.value = q; }
+    const showKey = params.get('show');
+    if (showKey && state.shows.some(s => s.key === showKey)) {
+      state.selectedKey = showKey;
+      state.selectedPartIdx = parseInt(params.get('part') || '0', 10) || 0;
+      state.jumpTime = parseInt(params.get('t') || '0', 10) || null;
+    }
+  }
+
+  // ─── INITIALIZATION ──────────────────────────────────────────────
+  let searchDebounce;
+  $search.addEventListener('input', e => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+      state.query = e.target.value.trim();
+      updateUrl();
+      renderShowsList();
+      if (state.selectedKey) renderDetail();
+    }, 120);
+  });
+
+  document.getElementById('refresh-btn').addEventListener('click', async () => {
+    setStatus('Refreshing…');
+    try {
+      const data = await loadAllData(true);
+      state.shows = buildShows(data.prime, data.setlists, data.aliases);
+      renderShowsList();
+      if (state.selectedKey) renderDetail();
+    } catch (err) {
+      console.error(err);
+      setStatus(`Error: ${err.message}`);
+    }
+  });
+
+  (async function init() {
+    try {
+      const data = await loadAllData(false);
+      state.shows = buildShows(data.prime, data.setlists, data.aliases);
+      console.info(`[BM Live] Built ${state.shows.length} shows from ${data.prime.filter(e => e.Category === 'OKYUJI').length} OKYUJI videos`);
+
+      loadFromUrl();
+      renderShowsList();
+      if (state.selectedKey) renderDetail();
+    } catch (err) {
+      console.error(err);
+      $showsPanel.innerHTML = `<div class="shows-empty">Failed to load data: ${escapeHtml(err.message)}</div>`;
+      setStatus('Error');
+    }
+  })();
+  </script>
+</body>
+</html>
