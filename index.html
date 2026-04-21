@@ -234,6 +234,7 @@
       display: block;
       text-decoration: none;
       transition: border-color 0.15s, transform 0.15s;
+      background: linear-gradient(135deg, var(--bg3) 0%, var(--bg4) 100%);
     }
     .video-card:hover {
       border-color: var(--accent-dim);
@@ -628,9 +629,16 @@
   function formatDate(d) {
     if (!d) return '';
     if (/^\d{4}$/.test(d)) return d;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-      const dt = new Date(d);
-      return dt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    // Parse YYYY-MM-DD manually to avoid timezone shifts.
+    // (new Date("2020-12-13") parses as UTC midnight, which displays as
+    //  the previous day in Western Hemisphere timezones.)
+    const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) {
+      const year = +m[1];
+      const month = +m[2];
+      const day = +m[3];
+      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${monthNames[month - 1]} ${day}, ${year}`;
     }
     return d;
   }
@@ -813,7 +821,7 @@
       : 'Open on Prime';
     const videoHtml = `
       <a class="video-frame video-card" href="${escapeHtml(openUrl)}" target="_blank" rel="noopener" title="${escapeHtml(jumpLabel)} (opens in new tab)">
-        ${part.image ? `<img class="video-card-bg" src="${escapeHtml(part.image)}" alt="">` : ''}
+        ${part.image ? `<img class="video-card-bg" src="${escapeHtml(part.image)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''}
         <div class="video-card-overlay">
           <div class="video-card-play">▶</div>
           <div class="video-card-label">${escapeHtml(jumpLabel)}</div>
