@@ -74,22 +74,42 @@
       margin-left: 8px;
     }
 
-    #search {
+    .search-wrap {
       flex: 1;
-      padding: 8px 12px;
+      max-width: 500px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    #search {
+      width: 100%;
+      padding: 8px 34px 8px 12px;
       background: var(--bg3);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       color: var(--text);
       font-family: var(--font);
       font-size: 14px;
-      max-width: 500px;
     }
     #search:focus {
       outline: none;
       border-color: var(--accent-dim);
       background: var(--bg4);
     }
+    .search-clear {
+      position: absolute;
+      right: 6px;
+      background: transparent;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: none;
+    }
+    .search-clear:hover { color: var(--accent); background: var(--bg4); }
+    .search-wrap.has-value .search-clear { display: block; }
 
     .btn {
       padding: 7px 14px;
@@ -220,8 +240,13 @@
       background: var(--bg2);
       border-bottom: 1px solid var(--border);
     }
+    .video-row {
+      display: flex;
+      gap: 16px;
+      align-items: stretch;
+    }
     .video-frame {
-      width: 100%;
+      flex: 0 0 50%;
       max-width: 50%;
       aspect-ratio: 16 / 9;
       background: #000;
@@ -229,6 +254,40 @@
       border-radius: var(--radius);
       overflow: hidden;
       position: relative;
+    }
+    .video-hint {
+      flex: 1 1 auto;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+      color: var(--text2);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .video-hint-title {
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .video-hint-body { color: var(--text); }
+    .video-hint-tip {
+      color: var(--text3);
+      font-size: 12px;
+      font-style: italic;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      margin-top: 4px;
+    }
+    @media (max-width: 900px) {
+      .video-row { flex-direction: column; }
+      .video-frame { flex: 0 0 auto; max-width: 100%; }
     }
     .video-card {
       display: block;
@@ -321,10 +380,6 @@
       background: var(--hl);
       border-color: var(--accent-dim);
       color: var(--accent);
-    }
-    .open-prime {
-      margin-left: auto;
-      font-size: 12px;
     }
 
     .setlist {
@@ -427,7 +482,10 @@
   <div class="app">
     <header class="top">
       <h1>BAND-MAID LIVE <span class="sub">Okyuji Archive</span></h1>
-      <input id="search" type="text" placeholder="Search shows, songs, venues, aliases (e.g., &quot;zepp tokyo&quot;, &quot;domination&quot;)…" autocomplete="off" spellcheck="false">
+      <div class="search-wrap">
+        <input id="search" type="text" placeholder="Search shows, songs, venues, aliases (e.g., &quot;zepp tokyo&quot;, &quot;domination&quot;)…" autocomplete="off" spellcheck="false">
+        <button id="search-clear" class="search-clear" title="Clear search" aria-label="Clear search">✕</button>
+      </div>
       <button class="btn accent" id="refresh-btn" title="Refetch data from source">⟲ Refresh</button>
       <span class="status" id="status">Loading…</span>
     </header>
@@ -811,11 +869,8 @@
                  Part ${p.partNum}
                </div>`).join('')}
            </div>
-           <a class="btn accent open-prime" href="${escapeHtml(part.url)}" target="_blank" rel="noopener">Open on Prime ↗</a>
          </div>`
-      : `<div class="video-controls">
-           <a class="btn accent open-prime" href="${escapeHtml(part.url)}" target="_blank" rel="noopener">Open on Prime ↗</a>
-         </div>`;
+      : '';
 
     // Prime blocks iframe embedding, so we show a thumbnail-based "play card"
     // that opens the video on Prime (with timestamp) in a new tab.
@@ -824,14 +879,28 @@
     const jumpLabel = state.jumpTime
       ? `Open on Prime at ${formatSeconds(state.jumpTime)}`
       : 'Open on Prime';
+    const hintHtml = state.jumpTime
+      ? `<div class="video-hint">
+           <div class="video-hint-title">Ready to jump to ${formatSeconds(state.jumpTime)}</div>
+           <div class="video-hint-body">Click the thumbnail to open this video on Prime, starting at the selected song.</div>
+           <div class="video-hint-tip">Tip: click a different song in the setlist below to change the jump point.</div>
+         </div>`
+      : `<div class="video-hint">
+           <div class="video-hint-title">How to watch</div>
+           <div class="video-hint-body">Click the thumbnail to open this video on Prime from the start.</div>
+           <div class="video-hint-tip">Tip: click any song in the setlist below to jump straight to that song when you open the video.</div>
+         </div>`;
     const videoHtml = `
-      <a class="video-frame video-card" href="${escapeHtml(openUrl)}" target="_blank" rel="noopener" title="${escapeHtml(jumpLabel)} (opens in new tab)">
-        ${part.image ? `<img class="video-card-bg" src="${escapeHtml(part.image)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''}
-        <div class="video-card-overlay">
-          <div class="video-card-play">▶</div>
-          <div class="video-card-label">${escapeHtml(jumpLabel)}</div>
-        </div>
-      </a>
+      <div class="video-row">
+        <a class="video-frame video-card" href="${escapeHtml(openUrl)}" target="_blank" rel="noopener" title="${escapeHtml(jumpLabel)} (opens in new tab)">
+          ${part.image ? `<img class="video-card-bg" src="${escapeHtml(part.image)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''}
+          <div class="video-card-overlay">
+            <div class="video-card-play">▶</div>
+            <div class="video-card-label">${escapeHtml(jumpLabel)}</div>
+          </div>
+        </a>
+        ${hintHtml}
+      </div>
     `;
 
     // Setlist rendering
@@ -955,7 +1024,16 @@
 
   // ─── INITIALIZATION ──────────────────────────────────────────────
   let searchDebounce;
+  const $searchWrap = $search.parentElement;
+  const $searchClear = document.getElementById('search-clear');
+
+  const syncSearchClearVisibility = () => {
+    if ($search.value) $searchWrap.classList.add('has-value');
+    else $searchWrap.classList.remove('has-value');
+  };
+
   $search.addEventListener('input', e => {
+    syncSearchClearVisibility();
     clearTimeout(searchDebounce);
     searchDebounce = setTimeout(() => {
       state.query = e.target.value.trim();
@@ -963,6 +1041,16 @@
       renderShowsList();
       if (state.selectedKey) renderDetail();
     }, 120);
+  });
+
+  $searchClear.addEventListener('click', () => {
+    $search.value = '';
+    state.query = '';
+    syncSearchClearVisibility();
+    updateUrl();
+    renderShowsList();
+    if (state.selectedKey) renderDetail();
+    $search.focus();
   });
 
   document.getElementById('refresh-btn').addEventListener('click', async () => {
@@ -985,6 +1073,7 @@
       console.info(`[BM Live] Built ${state.shows.length} shows from ${data.prime.filter(e => e.Category === 'OKYUJI').length} OKYUJI videos`);
 
       loadFromUrl();
+      syncSearchClearVisibility();
       renderShowsList();
       if (state.selectedKey) renderDetail();
     } catch (err) {
