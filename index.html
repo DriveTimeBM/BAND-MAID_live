@@ -229,29 +229,61 @@
       overflow: hidden;
       position: relative;
     }
-    .video-frame iframe {
+    .video-card {
+      display: block;
+      text-decoration: none;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .video-card:hover {
+      border-color: var(--accent-dim);
+    }
+    .video-card:hover .video-card-play {
+      background: var(--accent);
+      color: #000;
+      transform: scale(1.08);
+    }
+    .video-card-bg {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
-      border: 0;
-      display: block;
+      object-fit: cover;
+      opacity: 0.55;
+      transition: opacity 0.15s;
     }
-    .video-fallback {
+    .video-card:hover .video-card-bg { opacity: 0.75; }
+    .video-card-overlay {
       position: absolute;
       inset: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px;
-      color: var(--text2);
-      font-size: 13px;
-      text-align: center;
-      padding: 20px;
+      gap: 14px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.5) 100%);
+      color: var(--text);
     }
-    .video-fallback img {
-      max-width: 200px;
-      border-radius: 4px;
-      opacity: 0.8;
+    .video-card-play {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      padding-left: 4px;
+      transition: all 0.15s;
+    }
+    .video-card-label {
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      background: rgba(0, 0, 0, 0.5);
+      padding: 5px 14px;
+      border-radius: 20px;
     }
 
     .video-controls {
@@ -333,6 +365,12 @@
       border-left: 3px solid var(--accent);
       padding-left: 9px;
     }
+    .setlist-items li.selected-time {
+      background: var(--bg4);
+      border-left: 3px solid var(--accent);
+      padding-left: 9px;
+    }
+    .setlist-items li.selected-time .time { color: #e6c68a; }
     .setlist-items .time {
       color: var(--accent);
       font-family: 'Consolas', 'Menlo', monospace;
@@ -567,8 +605,22 @@
       });
     }
 
-    // Sort shows by title (alphabetical puts related ones together; dates vary in precision)
-    shows.sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }));
+    // Sort shows by date ascending. Shows with no date sort to the end by title.
+    // Dates can be "YYYY-MM-DD" (full) or "YYYY" (year only). We pad year-only
+    // to "YYYY-00-00" so they sort before dated events in the same year.
+    const dateKey = (show) => {
+      if (!show.date) return 'ZZZZ'; // no date → end
+      if (/^\d{4}-\d{2}-\d{2}$/.test(show.date)) return show.date;
+      if (/^\d{4}$/.test(show.date)) return `${show.date}-00-00`;
+      return show.date;
+    };
+    shows.sort((a, b) => {
+      const da = dateKey(a);
+      const db = dateKey(b);
+      if (da !== db) return da.localeCompare(db);
+      // Same date → alphabetical by title
+      return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+    });
     return shows;
   }
 
@@ -588,6 +640,15 @@
     if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
     if (parts.length === 2) return parts[0]*60 + parts[1];
     return parts[0] || 0;
+  }
+
+  function formatSeconds(s) {
+    if (!s || isNaN(s)) return '0:00';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    return `${m}:${String(sec).padStart(2,'0')}`;
   }
 
   // ─── SEARCH ───────────────────────────────────────────────────────
@@ -742,13 +803,21 @@
            <a class="btn accent open-prime" href="${escapeHtml(part.url)}" target="_blank" rel="noopener">Open on Prime ↗</a>
          </div>`;
 
-    // Try to embed with iframe; provide fallback with thumbnail + link if embedding is blocked
+    // Prime blocks iframe embedding, so we show a thumbnail-based "play card"
+    // that opens the video on Prime (with timestamp) in a new tab.
     const seekHash = state.jumpTime ? `#t=${state.jumpTime}` : '';
-    const embedUrl = `${part.url}${seekHash}`;
+    const openUrl  = `${part.url}${seekHash}`;
+    const jumpLabel = state.jumpTime
+      ? `Open on Prime at ${formatSeconds(state.jumpTime)}`
+      : 'Open on Prime';
     const videoHtml = `
-      <div class="video-frame">
-        <iframe src="${escapeHtml(embedUrl)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
-      </div>
+      <a class="video-frame video-card" href="${escapeHtml(openUrl)}" target="_blank" rel="noopener" title="${escapeHtml(jumpLabel)} (opens in new tab)">
+        ${part.image ? `<img class="video-card-bg" src="${escapeHtml(part.image)}" alt="">` : ''}
+        <div class="video-card-overlay">
+          <div class="video-card-play">▶</div>
+          <div class="video-card-label">${escapeHtml(jumpLabel)}</div>
+        </div>
+      </a>
     `;
 
     // Setlist rendering
@@ -819,24 +888,32 @@
       });
     });
 
-    // Setlist song clicks → seek the iframe
+    // Setlist song clicks → update the video card's link + label to include timestamp.
+    // User still has to click the card (or song twice) to actually open Prime; this
+    // double-step is deliberate so a click on a song doesn't unexpectedly open a new tab.
     $detailPanel.querySelectorAll('.setlist-items li').forEach(el => {
       if (el.classList.contains('non-interactive')) return;
       el.addEventListener('click', () => {
         const seconds = parseInt(el.dataset.t, 10);
         if (isNaN(seconds)) return;
         state.jumpTime = seconds;
-        // Reload iframe with new hash
-        const iframe = $detailPanel.querySelector('.video-frame iframe');
-        if (iframe) {
-          iframe.src = `${part.url}#t=${seconds}`;
+
+        // Update the video card link + label
+        const card = $detailPanel.querySelector('.video-card');
+        if (card) {
+          card.href = `${part.url}#t=${seconds}`;
+          const label = card.querySelector('.video-card-label');
+          if (label) label.textContent = `Open on Prime at ${formatSeconds(seconds)}`;
+          card.title = `Open on Prime at ${formatSeconds(seconds)} (opens in new tab)`;
         }
+
+        // Highlight the selected song in the setlist
+        $detailPanel.querySelectorAll('.setlist-items li').forEach(li => li.classList.remove('selected-time'));
+        el.classList.add('selected-time');
+
         updateUrl();
       });
     });
-
-    // Clear one-shot jumpTime after using it
-    // (keep in URL so refresh lands in same spot, but next part switch resets it)
   }
 
   // ─── URL STATE ────────────────────────────────────────────────────
