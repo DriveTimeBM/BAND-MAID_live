@@ -555,15 +555,20 @@
   // Each show = { key, title, displayTitle, parts: [{ videoId, partNum, title, setlist, venue, date, image }], venue, date, aliases }
   function buildShows(prime, setlists, aliases) {
     const okyuji = prime.filter(e => e.Category === 'OKYUJI' && e.URL);
-    // Group by derived key
+    // Group by derived (title + date) composite key so two shows with the same
+    // title pattern but different dates don't get lumped together as parts of
+    // one show. Proper multi-part shows share both title and date, so they
+    // still group correctly.
     const groups = new Map();
     for (const entry of okyuji) {
       const videoId = extractVideoId(entry.URL);
       if (!videoId) continue;
-      const key = deriveShowKey(entry.Title);
-      if (!groups.has(key)) groups.set(key, []);
+      const titleKey = deriveShowKey(entry.Title);
       const sl = setlists[videoId] || null;
-      groups.get(key).push({
+      const entryDate = sl && sl.date ? sl.date : deriveDate(entry.Title);
+      const groupKey = `${titleKey}||${entryDate || 'nodate'}`;
+      if (!groups.has(groupKey)) groups.set(groupKey, { titleKey, parts: [] });
+      groups.get(groupKey).parts.push({
         videoId,
         primeTitle: entry.Title,
         partNum: extractPartNumber(entry.Title),
@@ -576,13 +581,13 @@
       });
     }
 
-    // Alias lookup: case-insensitive substring on showKey
+    // Alias lookup: case-insensitive substring on title key (not composite)
     const aliasIndex = (aliases || []).map(a => ({
       key: (a.showKey || '').toLowerCase(),
       aliases: a.aliases || [],
     }));
-    const findAliases = (showKey) => {
-      const k = showKey.toLowerCase();
+    const findAliases = (titleKey) => {
+      const k = titleKey.toLowerCase();
       for (const a of aliasIndex) {
         if (!a.key) continue;
         if (k.includes(a.key) || a.key.includes(k)) return a.aliases;
@@ -591,19 +596,19 @@
     };
 
     const shows = [];
-    for (const [key, parts] of groups.entries()) {
+    for (const [groupKey, { titleKey, parts }] of groups.entries()) {
       parts.sort((a, b) => a.partNum - b.partNum);
       // Show-level metadata: prefer first part's setlist venue/date, else anything
       const venue = parts.find(p => p.venue)?.venue || '';
       const date  = parts.find(p => p.date)?.date || '';
       shows.push({
-        key,
-        title: key,
-        displayTitle: key,
+        key: groupKey,          // unique per show (title + date)
+        title: titleKey,        // display/search title (just the stripped title)
+        displayTitle: titleKey,
         venue,
         date,
         parts,
-        aliases: findAliases(key),
+        aliases: findAliases(titleKey),
       });
     }
 
